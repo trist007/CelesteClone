@@ -1,3 +1,4 @@
+#include "hweg_lib.h"
 
 // ################################################################
 //                       Platform Globals
@@ -111,6 +112,11 @@ int main()
   {
     // Update
     platform_update_window();
+
+    SM_TRACE("Text");
+    SM_WARN("Text");
+    SM_ERROR("Text");
+    SM_ASSERT(false, "Assertion not Hit!");
   }
 
   return 0;
