@@ -1,4 +1,5 @@
 #include "platform.h"
+#include "input.h"
 #include "hweg_lib.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -28,6 +29,13 @@ LRESULT CALLBACK windows_window_callback(HWND window, UINT msg,
       break;
     }
 
+    case WM_SIZE:
+    {
+      RECT rect = {};
+      GetClientRect(window, &rect);
+      input.screenSizeX = rect.right - rect.left;
+      input.screenSizeY = rect.bottom - rect.top;
+    }
 
     default:
     {
@@ -183,6 +191,23 @@ bool platform_create_window(int width, int height, const char* title)
 
     const int pixelAttribs[] =
     {
+      /*
+      WGL_DRAW_TO_WINDOW_ARB,                       1,  // Can be drawn to window.
+      WGL_DEPTH_BITS_ARB,                          24,  // 24 bits for depth buffer.
+      WGL_STENCIL_BITS_ARB,                         8,  // 8 bits for stencil buffer.
+      WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,  // Use hardware acceleration.
+      WGL_SWAP_METHOD_ARB,      WGL_SWAP_EXCHANGE_ARB,  // Exchange front and back buffer instead of copy.
+      WGL_SAMPLES_ARB,                              4,  // 4x MSAA.
+      WGL_SUPPORT_OPENGL_ARB,                       1,  // Support OpenGL rendering.
+      WGL_DOUBLE_BUFFER_ARB,                        1,  // Enable double-buffering.
+      WGL_PIXEL_TYPE_ARB,           WGL_TYPE_RGBA_ARB,  // RGBA color mode.
+      WGL_COLOR_BITS_ARB,                          32,  // 32 bit color.
+      WGL_RED_BITS_ARB,                             8,  // 8 bits for red.
+      WGL_GREEN_BITS_ARB,                           8,  // 8 bits for green.
+      WGL_BLUE_BITS_ARB,                            8,  // 8 bits for blue.
+      WGL_ALPHA_BITS_ARB,                           8,  // 8 bits for alpha.
+      0                                              
+      */
       WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
       WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
       WGL_DOUBLE_BUFFER_ARB,  GL_TRUE,
@@ -195,13 +220,15 @@ bool platform_create_window(int width, int height, const char* title)
       0 // Terminate with 0, otherwise OpenGL will throw an Error!
     };
 
-    UINT numPixelFormats;
+    UINT numPixelFormats = 0;
     int pixelFormat = 0;
+
     if(!wglChoosePixelFormatARB(dc, pixelAttribs,
                                 0, // Float List
                                 1, // Max Formats
                                 &pixelFormat,
                                 &numPixelFormats))
+
     {
       SM_ASSERT(0, "Failed to wglChoosePixelFormatARB");
       return false;
