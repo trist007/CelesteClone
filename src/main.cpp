@@ -16,8 +16,7 @@
 
 int main()
 {
-  //BumpAllocator transientStorage = make_bump_allocator(MB(50));
-  BumpAllocator transientStorage = make_bump_allocator(1024);
+  BumpAllocator transientStorage = make_bump_allocator(MB(50));
 
   platform_create_window(1200, 720, "Game");
   input.screenSizeX = 1200;
