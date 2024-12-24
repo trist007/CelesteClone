@@ -147,7 +147,7 @@ char* bump_alloc(BumpAllocator* bumpAllocator, size_t size)
 //                       File I/O
 // ################################################################
 
-long long get_timestamp(char* file)
+long long get_timestamp(const char* file)
 {
   struct stat file_stat = {};
   stat(file, &file_stat);
