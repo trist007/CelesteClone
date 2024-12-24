@@ -49,7 +49,7 @@ LRESULT CALLBACK windows_window_callback(HWND window, UINT msg,
   return result;
 }
 
-bool platform_create_window(int width, int height, const char* title)
+bool platform_create_window(int width, int height, char* title)
 {
   HINSTANCE instance = GetModuleHandleA(0);
 
@@ -193,7 +193,6 @@ bool platform_create_window(int width, int height, const char* title)
 
     const int pixelAttribs[] =
     {
-      /*
       WGL_DRAW_TO_WINDOW_ARB,                       1,  // Can be drawn to window.
       WGL_DEPTH_BITS_ARB,                          24,  // 24 bits for depth buffer.
       WGL_STENCIL_BITS_ARB,                         8,  // 8 bits for stencil buffer.
@@ -209,20 +208,9 @@ bool platform_create_window(int width, int height, const char* title)
       WGL_BLUE_BITS_ARB,                            8,  // 8 bits for blue.
       WGL_ALPHA_BITS_ARB,                           8,  // 8 bits for alpha.
       0                                              
-      */
-      WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-      WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-      WGL_DOUBLE_BUFFER_ARB,  GL_TRUE,
-      WGL_SWAP_METHOD_ARB,    WGL_SWAP_COPY_ARB,
-      WGL_PIXEL_TYPE_ARB,     WGL_TYPE_RGBA_ARB,
-      WGL_ACCELERATION_ARB,   WGL_FULL_ACCELERATION_ARB,
-      WGL_COLOR_BITS_ARB,     32,
-      WGL_ALPHA_BITS_ARB,     8,
-      WGL_DEPTH_BITS_ARB,     24,
-      0 // Terminate with 0, otherwise OpenGL will throw an Error!
     };
 
-    UINT numPixelFormats = 0;
+    UINT numPixelFormats;
     int pixelFormat = 0;
 
     if(!wglChoosePixelFormatARB(dc, pixelAttribs,
