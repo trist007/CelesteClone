@@ -16,7 +16,8 @@
 
 int main()
 {
-  BumpAllocator transientStorage = make_bump_allocator(MB(50));
+  //BumpAllocator transientStorage = make_bump_allocator(MB(50));
+  BumpAllocator transientStorage = make_bump_allocator(1024);
 
   platform_create_window(1200, 720, "Game");
   input.screenSizeX = 1200;
@@ -29,6 +30,8 @@ int main()
     // Update
     platform_update_window();
     gl_render();
+
+    platform_swap_buffers();
 
   }
 

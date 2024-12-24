@@ -35,6 +35,8 @@ LRESULT CALLBACK windows_window_callback(HWND window, UINT msg,
       GetClientRect(window, &rect);
       input.screenSizeX = rect.right - rect.left;
       input.screenSizeY = rect.bottom - rect.top;
+
+      break;
     }
 
     default:
@@ -299,4 +301,9 @@ void* platform_load_gl_function(char* funName)
   }
 
   return (void*)proc;
+}
+
+void platform_swap_buffers()
+{
+  SwapBuffers(dc);
 }

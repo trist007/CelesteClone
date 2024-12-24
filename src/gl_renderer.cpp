@@ -104,6 +104,9 @@ bool gl_init(BumpAllocator* transientStorage)
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_GREATER);
 
+  // Use Program renderdoc
+  glUseProgram(glContext.programID);
+
   return true;
 }
 
