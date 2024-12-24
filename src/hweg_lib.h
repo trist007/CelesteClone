@@ -89,13 +89,13 @@ void _log(char* prefix, char* msg, TextColor textColor, Args... args)
 #define SM_ERROR(msg, ...) _log("ERROR: ", msg, TEXT_COLOR_RED, ##__VA_ARGS__);
 
 #define SM_ASSERT(x, msg, ...)    \
-{                                 \  
+{                                 \
   if(!(x))                        \
-  {                               \                     
-    SM_ERROR(msg, ##__VA_ARGS__); \              
-    DEBUG_BREAK();                \       
+  {                               \
+    SM_ERROR(msg, ##__VA_ARGS__); \
+    DEBUG_BREAK();                \
     SM_ERROR("Assertion HIT!")    \
-  }                               \              
+  }                               \
 }
 
 // ################################################################
