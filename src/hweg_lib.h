@@ -122,6 +122,7 @@ BumpAllocator make_bump_allocator(size_t size)
   {
     SM_ASSERT(false, "Failed to allocate Memory!");
   }
+
   return ba;
 }
 

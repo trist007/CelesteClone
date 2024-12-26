@@ -1,5 +1,7 @@
 #include "gl_renderer.h"
 #include <GL/gl.h>
+#include <iostream>
+#include "input.h"
 
 // ################################################################
 //                       OpenGL Structs
@@ -62,12 +64,18 @@ bool gl_init(BumpAllocator* transientStorage)
   // Test if Vertex shader compiled successfully
   {
     int success;
-    char shaderLog[2048] = {};
+    GLint logLength;
 
     glGetShaderiv(vertShaderID, GL_COMPILE_STATUS, &success);
+    glGetShaderiv(vertShaderID, GL_INFO_LOG_LENGTH, &logLength);
+    char* shaderLog = new char[logLength];
     if(!success)
     {
-      glGetShaderInfoLog(vertShaderID, 2048, 0, shaderLog);
+      glGetShaderInfoLog(vertShaderID, logLength, &logLength, shaderLog);
+      std::cerr << "log: " << shaderLog << std::endl;
+      //char errorStr[1024];
+      //FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
+      //printf("Error: %s\n", errorStr);
       SM_ASSERT(false, "Failed to compile vertex shader: %s", shaderLog);
     }
   }

@@ -146,13 +146,13 @@ bool platform_create_window(int width, int height, char* title)
     }
 
     // Clean up the take stuff
-    wglMakeCurrent(fakeDC, 0);
-    wglDeleteContext(fakeRC);
-    ReleaseDC(window, fakeDC);
+    //wglMakeCurrent(fakeDC, 0);
+    //wglDeleteContext(fakeRC);
+    //ReleaseDC(window, fakeDC);
 
     // Can't reuse the same (Device)Context, 
     // because we already called "SetPixelFormat"
-    DestroyWindow(window);  
+    //DestroyWindow(window);  
   }
 
   // Actual OpenGL initialization
@@ -191,44 +191,40 @@ bool platform_create_window(int width, int height, char* title)
       return false;
     }
 
-    const int pixelAttribs[] =
+    const int attribList[] =
     {
-      WGL_DRAW_TO_WINDOW_ARB,                       1,  // Can be drawn to window.
-      WGL_DEPTH_BITS_ARB,                          24,  // 24 bits for depth buffer.
-      WGL_STENCIL_BITS_ARB,                         8,  // 8 bits for stencil buffer.
-      WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,  // Use hardware acceleration.
-      WGL_SWAP_METHOD_ARB,      WGL_SWAP_EXCHANGE_ARB,  // Exchange front and back buffer instead of copy.
-      WGL_SAMPLES_ARB,                              4,  // 4x MSAA.
-      WGL_SUPPORT_OPENGL_ARB,                       1,  // Support OpenGL rendering.
-      WGL_DOUBLE_BUFFER_ARB,                        1,  // Enable double-buffering.
-      WGL_PIXEL_TYPE_ARB,           WGL_TYPE_RGBA_ARB,  // RGBA color mode.
-      WGL_COLOR_BITS_ARB,                          32,  // 32 bit color.
-      WGL_RED_BITS_ARB,                             8,  // 8 bits for red.
-      WGL_GREEN_BITS_ARB,                           8,  // 8 bits for green.
-      WGL_BLUE_BITS_ARB,                            8,  // 8 bits for blue.
-      WGL_ALPHA_BITS_ARB,                           8,  // 8 bits for alpha.
-      0                                              
+        WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+        WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+        WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+        WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+        WGL_COLOR_BITS_ARB, 32,
+        WGL_DEPTH_BITS_ARB, 24,
+        WGL_STENCIL_BITS_ARB, 8,
+        0, // End
     };
 
-    UINT numPixelFormats;
-    int pixelFormat = 0;
+    PIXELFORMATDESCRIPTOR pfd = {0};
+    pfd.nSize = sizeof(pfd);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cAlphaBits = 8;
+    pfd.cDepthBits = 24;
 
-    if(!wglChoosePixelFormatARB(dc, pixelAttribs,
-                                0, // Float List
-                                1, // Max Formats
-                                &pixelFormat,
-                                &numPixelFormats))
-
+    int pixelFormat = ChoosePixelFormat(dc, &pfd);
+    if(!pixelFormat)
     {
-      SM_ASSERT(0, "Failed to wglChoosePixelFormatARB");
+      SM_ASSERT(false, "Failed to choose pixel Format");
       return false;
     }
 
-    PIXELFORMATDESCRIPTOR pfd = {0};
-    DescribePixelFormat(dc, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 
     if(!SetPixelFormat(dc, pixelFormat, &pfd))
     {
+      //char errorStr[1024];
+      //FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
+      //printf("Error: %s\n", errorStr);
       SM_ASSERT(0, "Failed to SetPixelFormat");
       return true;
     }
@@ -249,11 +245,13 @@ bool platform_create_window(int width, int height, char* title)
       return false;
     }
 
+/*
     if(!wglMakeCurrent(dc, rc))
     {
-      SM_ASSERT(0, "Faield to wglMakeCurrent");
+      SM_ASSERT(0, "Failed to wglMakeCurrent");
       return false;
     }
+*/
   }
 
   ShowWindow(window, SW_SHOW);
