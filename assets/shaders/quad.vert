@@ -1,5 +1,7 @@
 #version 430 core
 
+layout (location = 0)in vec3 aPos;
+
 void main()
 {
   // Generating vertices on the GPU
@@ -9,6 +11,7 @@ void main()
   // -1/ 1              1/ 1
   // -1/-1              1/-1
 
+/*
   vec2 vertices[6] =
   {
     // Top Left
@@ -26,9 +29,18 @@ void main()
     // Bottom Left
     vec2(-0.5, -0.5),
 
-    // Bottom Rigbht
+    // Bottom Right
     vec2( 0.5, -0.5)
   };
+*/
 
-  gl_Position = vec4(vertices[gl_VertexID], 1.0, 1.0);
+  float vertices[] =
+  {
+    -0.5, 0.5, 0.0,
+    0.5, 0.5, 0.0,
+    0.5, -0.5, 0.0,
+    -0.5, -0.5, 0.0
+  };
+  //gl_Position = vec4(vertices[gl_VertexID], 1.0, 1.0);
+  gl_Position = vec4(a.Pos.x, aPos.y, aPos.z, 1.0);
 }

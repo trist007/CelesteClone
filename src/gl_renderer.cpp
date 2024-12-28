@@ -63,23 +63,22 @@ bool gl_init(BumpAllocator* transientStorage)
 
   // Test if Vertex shader compiled successfully
   {
-    int success;
-    GLint logLength;
-
+    GLint success;
     glGetShaderiv(vertShaderID, GL_COMPILE_STATUS, &success);
-    glGetShaderiv(vertShaderID, GL_INFO_LOG_LENGTH, &logLength);
-    char* shaderLog = new char[logLength];
-    if(!success)
-    {
-      glGetShaderInfoLog(vertShaderID, logLength, &logLength, shaderLog);
-      std::cerr << "log: " << shaderLog << std::endl;
-      //char errorStr[1024];
-      //FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
-      //printf("Error: %s\n", errorStr);
-      SM_ASSERT(false, "Failed to compile vertex shader: %s", shaderLog);
-    }
-  }
+    if (!success) {
+        GLint logLength;
+        glGetShaderiv(vertShaderID, GL_INFO_LOG_LENGTH, &logLength);
+        if (logLength > 0) {
+            char* shaderLog = new char[logLength + 1]; // +1 for null-terminator
+            glGetShaderInfoLog(vertShaderID, logLength, nullptr, shaderLog);
+            shaderLog[logLength] = '\0'; // Ensure null-termination
+            std::cerr << "Vertex Shader Compilation Log: " << shaderLog << std::endl;
+            delete[] shaderLog;
+        }
+        SM_ASSERT(false, "Failed to compile vertex shader");
 
+    }
+}
   // Test if Fragment shader compiled successfully
   {
     int success;
@@ -92,6 +91,29 @@ bool gl_init(BumpAllocator* transientStorage)
       SM_ASSERT(false, "Failed to compile vertex shader: %s", shaderLog);
     }
   }
+
+
+/*  {
+    GLint success;
+    GLint logLength;
+
+    glGetShaderiv(vertShaderID, GL_COMPILE_STATUS, &success);
+    glGetShaderiv(vertShaderID, GL_INFO_LOG_LENGTH, &logLength);
+    GLchar shaderLog[8192];
+    
+    if(!success)
+    {
+      glGetShaderInfoLog(vertShaderID, (GLsizei)logLength, (GLsizei*)&logLength, (GLchar*)shaderLog);
+      shaderLog[logLength] = '\0';
+      std::cerr << "log: " << (GLchar*)shaderLog << std::endl;
+      //char errorStr[1024];
+      //FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
+      //printf("Error: %s\n", errorStr);
+      SM_ASSERT(false, "Failed to compile vertex shader: %s", shaderLog);
+    }
+  }
+  */
+
 
   glContext.programID = glCreateProgram();
   glAttachShader(glContext.programID, vertShaderID);

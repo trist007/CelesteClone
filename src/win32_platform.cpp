@@ -146,13 +146,13 @@ bool platform_create_window(int width, int height, char* title)
     }
 
     // Clean up the take stuff
-    //wglMakeCurrent(fakeDC, 0);
-    //wglDeleteContext(fakeRC);
-    //ReleaseDC(window, fakeDC);
+    wglMakeCurrent(fakeDC, 0);
+    wglDeleteContext(fakeRC);
+    ReleaseDC(window, fakeDC);
 
     // Can't reuse the same (Device)Context, 
     // because we already called "SetPixelFormat"
-    //DestroyWindow(window);  
+    DestroyWindow(window);  
   }
 
   // Actual OpenGL initialization
@@ -191,17 +191,21 @@ bool platform_create_window(int width, int height, char* title)
       return false;
     }
 
+    UINT numFormats;
     const int attribList[] =
     {
         WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
         WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-        WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-        WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-        WGL_COLOR_BITS_ARB, 32,
-        WGL_DEPTH_BITS_ARB, 24,
-        WGL_STENCIL_BITS_ARB, 8,
-        0, // End
+        WGL_DOUBLE_BUFFER_ARB,  GL_TRUE,
+        WGL_SWAP_METHOD_ARB,    WGL_SWAP_COPY_ARB,
+        WGL_PIXEL_TYPE_ARB,     WGL_TYPE_RGBA_ARB,
+        WGL_ACCELERATION_ARB,   WGL_FULL_ACCELERATION_ARB,
+        WGL_COLOR_BITS_ARB,     32,
+        WGL_ALPHA_BITS_ARB,     8,
+        WGL_DEPTH_BITS_ARB,     24,
+        0 // Terminate with 0, otherwise OpenGL will throw an Error!
     };
+
 
     PIXELFORMATDESCRIPTOR pfd = {0};
     pfd.nSize = sizeof(pfd);
@@ -219,12 +223,17 @@ bool platform_create_window(int width, int height, char* title)
       return false;
     }
 
+    /*
+    int pixelFormat = 0;
+    bool result = wglChoosePixelFormatARB(dc, attribList, NULL, 1, &pixelFormat, &numFormats);
+    DescribePixelFormat(dc, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+    */
 
     if(!SetPixelFormat(dc, pixelFormat, &pfd))
     {
-      //char errorStr[1024];
-      //FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
-      //printf("Error: %s\n", errorStr);
+      char errorStr[1024];
+      FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
+      printf("Error: %s\n", errorStr);
       SM_ASSERT(0, "Failed to SetPixelFormat");
       return true;
     }
@@ -238,20 +247,21 @@ bool platform_create_window(int width, int height, char* title)
       0 // Terminate the Array
     };
 
-    HGLRC rc = wglCreateContextAttribsARB(dc, 0, contextAttribs);
+    HGLRC rc = wglCreateContext(dc);
     if(!rc)
     {
-      SM_ASSERT(0, "Failed to crate Render Context for OpenGL");
-      return false;
+      SM_ASSERT(false, "Failed to create Render context");
     }
 
-/*
     if(!wglMakeCurrent(dc, rc))
     {
+      char errorStr[1024];
+      FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
+      printf("Error: %s\n", errorStr);
       SM_ASSERT(0, "Failed to wglMakeCurrent");
       return false;
     }
-*/
+
   }
 
   ShowWindow(window, SW_SHOW);
