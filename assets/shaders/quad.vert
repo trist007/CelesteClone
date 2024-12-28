@@ -11,7 +11,6 @@ void main()
   // -1/ 1              1/ 1
   // -1/-1              1/-1
 
-/*
   vec2 vertices[6] =
   {
     // Top Left
@@ -32,8 +31,8 @@ void main()
     // Bottom Right
     vec2( 0.5, -0.5)
   };
-*/
 
+/*
   float vertices[] =
   {
     -0.5, 0.5, 0.0,
@@ -41,6 +40,7 @@ void main()
     0.5, -0.5, 0.0,
     -0.5, -0.5, 0.0
   };
-  //gl_Position = vec4(vertices[gl_VertexID], 1.0, 1.0);
-  gl_Position = vec4(a.Pos.x, aPos.y, aPos.z, 1.0);
+*/
+  gl_Position = vec4(vertices[gl_VertexID], 1.0, 1.0);
+ // gl_Position = vec4(a.Pos.x, aPos.y, aPos.z, 1.0);
 }
