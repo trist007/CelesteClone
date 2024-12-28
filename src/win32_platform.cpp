@@ -191,7 +191,6 @@ bool platform_create_window(int width, int height, char* title)
       return false;
     }
 
-    UINT numFormats;
     const int attribList[] =
     {
         WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
@@ -223,11 +222,10 @@ bool platform_create_window(int width, int height, char* title)
       return false;
     }
 
-    /*
-    int pixelFormat = 0;
-    bool result = wglChoosePixelFormatARB(dc, attribList, NULL, 1, &pixelFormat, &numFormats);
-    DescribePixelFormat(dc, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
-    */
+    // UINT numFormats;
+    // int pixelFormat = 0;
+    // bool result = wglChoosePixelFormatARB(dc, attribList, NULL, 1, &pixelFormat, &numFormats);
+    // DescribePixelFormat(dc, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 
     if(!SetPixelFormat(dc, pixelFormat, &pfd))
     {
