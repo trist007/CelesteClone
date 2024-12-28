@@ -7,8 +7,8 @@
 // ################################################################
 struct Input
 {
-  int screenSizeX;
-  int screenSizeY;
+    int screenSizeX;
+    int screenSizeY;
 };
 
 // ################################################################

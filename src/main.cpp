@@ -16,23 +16,22 @@
 
 int main()
 {
-  BumpAllocator transientStorage = make_bump_allocator(MB(50));
+    BumpAllocator transientStorage = make_bump_allocator(MB(50));
 
-  platform_create_window(1200, 720, "Game");
-  input.screenSizeX = 1200;
-  input.screenSizeY = 720;
+    platform_create_window(1200, 720, "Game");
+    input.screenSizeX = 1200;
+    input.screenSizeY = 720;
 
-  gl_init(&transientStorage);
+    gl_init(&transientStorage);
 
-  while(running)
-  {
-    // Update
-    platform_update_window();
-    gl_render();
+    while (running)
+    {
+        // Update
+        platform_update_window();
+        gl_render();
 
-    platform_swap_buffers();
+        platform_swap_buffers();
+    }
 
-  }
-
-  return 0;
+    return 0;
 }
