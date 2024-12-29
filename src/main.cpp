@@ -1,4 +1,4 @@
-#include "hweg_lib.h"
+#include "schnitzel_lib.h"
 
 #include "input.h"
 

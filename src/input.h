@@ -1,6 +1,6 @@
 #pragma once
 
-#include "hweg_lib.h"
+#include "schnitzel_lib.h"
 
 // ################################################################
 //                      Input Structs

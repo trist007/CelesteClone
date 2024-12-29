@@ -1,6 +1,5 @@
 #pragma once
-#include "hweg_lib.h"
-#include "platform.h"
+
 #include "glcorearb.h"
 
 // #############################################################################

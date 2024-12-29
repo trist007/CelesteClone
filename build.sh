@@ -5,4 +5,4 @@ warnings="-Wall -Wextra -Werror -Wno-unused-variable -Wno-missing-field-initiali
           -Wno-unused-parameter -Wno-writable-strings -Wno-format-security -Wno-deprecated-declarations"
 includes="-Ithird_party -Ithird_party/Include"
 
-clang++ -fsanitize=address $includes -g src/main.cpp -o hweg.exe $libs $warnings
+clang++ -fsanitize=address $includes -g src/main.cpp -o schnitzel.exe $libs $warnings
