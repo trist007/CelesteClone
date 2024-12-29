@@ -1,6 +1,6 @@
 #pragma once
 
-#include "hweg_lib.h"
+#include "schnitzel_lib.h"
 
 // ################################################################
 //                      Input Structs
@@ -14,4 +14,4 @@ struct Input
 // ################################################################
 //                      Input Globals
 // ################################################################
-static Input input;
+static Input* input;
