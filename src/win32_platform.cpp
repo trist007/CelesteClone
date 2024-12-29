@@ -12,7 +12,8 @@
 //                       Windows Globals
 // ################################################################
 static HWND window;
-static HDC dc;
+static HGLRC GlobalOpenGLRC;
+static HDC GlobalDC;
 // ################################################################
 //                       Platform Implementations
 // ################################################################
@@ -49,7 +50,177 @@ LRESULT CALLBACK windows_window_callback(HWND window, UINT msg,
     return result;
 }
 
-bool platform_create_window(int width, int height, char *title)
+// Declarations for WGL Extensions
+PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = nullptr;
+PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = nullptr;
+
+int Win32OpenGLAttribs[] =
+{
+    WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+    WGL_CONTEXT_MINOR_VERSION_ARB, 0,
+    WGL_CONTEXT_FLAGS_ARB, 0 // NOTE(casey): Enable for testing WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
+#if HANDMADE_INTERNAL
+    |WGL_CONTEXT_DEBUG_BIT_ARB
+#endif
+    ,
+    WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
+    0,
+};
+
+void Win32CreateOpenGLContextForWorkerThread(void)
+{
+    if(wglCreateContextAttribsARB)
+    {
+        HDC WindowDC = GlobalDC;
+        HGLRC ShareContext = GlobalOpenGLRC;
+        HGLRC ModernGLRC = wglCreateContextAttribsARB(WindowDC, ShareContext, Win32OpenGLAttribs);
+        if(ModernGLRC)
+        {
+            if(wglMakeCurrent(WindowDC, ModernGLRC))
+            {
+                // TODO(casey): Fatal error?
+            }
+            else
+            {
+                SM_ASSERT(false, "Unable to create texture download context");
+                return;
+            }
+        }
+    }
+}
+
+void Win32SetPixelFormat(HDC WindowDC)
+{
+    int SuggestedPixelFormatIndex = 0;
+    GLuint ExtendedPick = 0;
+    if (wglChoosePixelFormatARB)
+    {
+        int IntAttribList[] =
+            {
+                WGL_DRAW_TO_WINDOW_ARB,
+                GL_TRUE,
+                WGL_ACCELERATION_ARB,
+                WGL_FULL_ACCELERATION_ARB,
+                WGL_SUPPORT_OPENGL_ARB,
+                GL_TRUE,
+#if CELESTECLONE_STREAMING
+                WGL_DOUBLE_BUFFER_ARB,
+                GL_FALSE,
+#else
+                WGL_DOUBLE_BUFFER_ARB,
+                GL_TRUE,
+#endif
+                WGL_PIXEL_TYPE_ARB,
+                WGL_TYPE_RGBA_ARB,
+                WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB,
+                GL_TRUE,
+                0,
+            };
+
+        float FloatAttribList[] = {0};
+
+        wglChoosePixelFormatARB(WindowDC, IntAttribList, FloatAttribList, 1,
+                                &SuggestedPixelFormatIndex, &ExtendedPick);
+    }
+
+    if (!ExtendedPick)
+    {
+        // TODO(casey): Hey Raymond Chen - what's the deal here?
+        // Is cColorBits ACTUALLY supposed to exclude the alpha bits, like MSDN says, or not?
+        PIXELFORMATDESCRIPTOR DesiredPixelFormat = {};
+        DesiredPixelFormat.nSize = sizeof(DesiredPixelFormat);
+        DesiredPixelFormat.nVersion = 1;
+        DesiredPixelFormat.iPixelType = PFD_TYPE_RGBA;
+#if CELESTECLONE_STREAMING
+        // NOTE(casey): PFD_DOUBLEBUFFER appears to prevent OBS from reliably streaming the window
+        DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+#else
+        DesiredPixelFormat.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER;
+#endif
+        DesiredPixelFormat.cColorBits = 32;
+        DesiredPixelFormat.cAlphaBits = 8;
+        DesiredPixelFormat.iLayerType = PFD_MAIN_PLANE;
+
+        SuggestedPixelFormatIndex = ChoosePixelFormat(WindowDC, &DesiredPixelFormat);
+    }
+
+    PIXELFORMATDESCRIPTOR SuggestedPixelFormat;
+    DescribePixelFormat(WindowDC, SuggestedPixelFormatIndex,
+                        sizeof(SuggestedPixelFormat), &SuggestedPixelFormat);
+    SetPixelFormat(WindowDC, SuggestedPixelFormatIndex, &SuggestedPixelFormat);
+}
+
+void Win32LoadWGLExtensions(void)
+{
+    WNDCLASSA WindowClass = {};
+
+    WindowClass.lpfnWndProc = DefWindowProcA;
+    WindowClass.hInstance = GetModuleHandle(0);
+    WindowClass.lpszClassName = "Dummy_WGL_dont_use";
+
+    if(RegisterClassA(&WindowClass))
+    {
+        HWND Window = CreateWindowExA(
+            0,
+            WindowClass.lpszClassName,
+            "Dummy_WGL_dont_use",
+            0,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            0,
+            0,
+            WindowClass.hInstance,
+            0);
+        
+        HDC WindowDC = GetDC(Window);
+        Win32SetPixelFormat(WindowDC);
+        HGLRC OpenGLRC = wglCreateContext(WindowDC);
+        if(wglMakeCurrent(WindowDC, OpenGLRC))        
+        {
+            wglChoosePixelFormatARB =
+                (PFNWGLCHOOSEPIXELFORMATARBPROC)platform_load_gl_function("wglChoosePixelFormatARB");
+            wglCreateContextAttribsARB =
+                (PFNWGLCREATECONTEXTATTRIBSARBPROC)platform_load_gl_function("wglCreateContextAttribsARB");
+
+            wglMakeCurrent(0, 0);
+        }
+
+        wglDeleteContext(OpenGLRC);
+        ReleaseDC(Window, WindowDC);
+        DestroyWindow(Window);
+    }
+
+}
+
+HGLRC Win32InitOpenGL(HDC WindowDC)
+{
+    Win32LoadWGLExtensions();
+
+    HGLRC OpenGLRC = 0;
+    if(wglCreateContextAttribsARB)
+    {
+        Win32SetPixelFormat(WindowDC);
+        OpenGLRC = wglCreateContextAttribsARB(WindowDC, 0, Win32OpenGLAttribs);
+    }
+    
+    if(!OpenGLRC)
+    {
+        OpenGLRC = wglCreateContext(WindowDC);
+    }
+
+    if(!wglMakeCurrent(WindowDC, OpenGLRC))
+    {
+        SM_ASSERT(false, "Failed to make current");
+        return false;
+    }
+    
+    return(OpenGLRC);
+}
+
+//bool platform_create_window(int width, int height, char *title)
+bool platform_create_window(int width, int height, char* title)
 {
     HINSTANCE instance = GetModuleHandleA(0);
 
@@ -66,240 +237,44 @@ bool platform_create_window(int width, int height, char *title)
         return false;
     }
 
-    // WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
     int dwStyle = WS_OVERLAPPEDWINDOW;
 
-    PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = nullptr;
-    PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = nullptr;
+    RECT borderRect = {};
+    AdjustWindowRectEx(&borderRect, dwStyle, 0, 0);
 
-    // Fake Window initializing OpenGL
+    width += borderRect.right - borderRect.left;
+    height += borderRect.bottom - borderRect.top;
+
+    window = CreateWindowExA(0, title, // This references lpszClassName from wc
+                             title,    // This is the actual Title
+                             dwStyle,
+                             100,
+                             100,
+                             width,
+                             height,
+                             NULL, // parent
+                             NULL, // menu
+                             instance,
+                             NULL); // lpParam
+
+    if (window == NULL)
     {
-        window = CreateWindowExA(0, title, // This references lpszClassName from wc
-                                 title,    // This is the actual Title
-                                 dwStyle,
-                                 100,
-                                 100,
-                                 width,
-                                 height,
-                                 NULL, // parent
-                                 NULL, // menu
-                                 instance,
-                                 NULL); // lpParam
-
-        if (window == NULL)
-        {
-            SM_ASSERT(false, "Failed to create Windows Window");
-            return false;
-        }
-
-        HDC fakeDC = GetDC(window);
-        if (!fakeDC)
-        {
-            SM_ASSERT(false, "Failed to get HDC");
-            return false;
-        }
-
-        PIXELFORMATDESCRIPTOR pfd =
-            {
-                sizeof(PIXELFORMATDESCRIPTOR),
-                1,
-                PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER, // Flags
-                PFD_TYPE_RGBA,                                              // The kind of framebuffer. RGBA or palette.
-                32,                                                         // Colordepth of the framebuffer.
-                0, 0, 0, 0, 0, 0,
-                0,
-                0,
-                0,
-                0, 0, 0, 0,
-                24, // Number of bits for the depthbuffer
-                8,  // Number of bits for the stencilbuffer
-                0,  // Number of Aux buffers in the framebuffer.
-                PFD_MAIN_PLANE,
-                0,
-                0, 0, 0};
-
-        // PIXELFORMATDESCRIPTOR pfd = {0};
-        // pfd.nSize = sizeof(pfd);
-        // pfd.nVersion = 1;
-        // pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-        // pfd.iPixelType = PFD_TYPE_RGBA;
-        // pfd.cColorBits = 32;
-        // pfd.cAlphaBits = 8;
-        // pfd.cDepthBits = 24;
-
-        int pixelFormat = ChoosePixelFormat(fakeDC, &pfd);
-        if (!pixelFormat)
-        {
-            SM_ASSERT(false, "Failed to choose pixel Format");
-            return false;
-        }
-
-        if (!SetPixelFormat(fakeDC, pixelFormat, &pfd))
-        {
-            SM_ASSERT(false, "Failed to set pixel format");
-            return false;
-        }
-
-        // Create a Handle to a fake OpenGL Rendering Context
-        HGLRC fakeRC = wglCreateContext(fakeDC);
-        if (!fakeRC)
-        {
-            SM_ASSERT(false, "Failed to create Render context");
-            return false;
-        }
-
-        if (!wglMakeCurrent(fakeDC, fakeRC))
-        {
-            SM_ASSERT(false, "Failed to make current");
-            return false;
-        }
-
-        wglChoosePixelFormatARB =
-            (PFNWGLCHOOSEPIXELFORMATARBPROC)platform_load_gl_function("wglChoosePixelFormatARB");
-        wglCreateContextAttribsARB =
-            (PFNWGLCREATECONTEXTATTRIBSARBPROC)platform_load_gl_function("wglCreateContextAttribsARB");
-
-        if (!wglCreateContextAttribsARB || !wglChoosePixelFormatARB)
-        {
-            SM_ASSERT(false, "Failed to load OpenGL functions");
-            return false;
-        }
-
-        // Clean up the take stuff
-        wglMakeCurrent(fakeDC, 0);
-        wglDeleteContext(fakeRC);
-        ReleaseDC(window, fakeDC);
-
-        // Can't reuse the same (Device)Context,
-        // because we already called "SetPixelFormat"
-        DestroyWindow(window);
+        SM_ASSERT(false, "Failed to create Windows Window");
+        return false;
     }
 
-    // Actual OpenGL initialization
+    GlobalDC = GetDC(window);
+    if (!GlobalDC)
     {
-        // Add in the border size of the window
-        {
-            RECT borderRect = {};
-            AdjustWindowRectEx(&borderRect, dwStyle, 0, 0);
-
-            width += borderRect.right - borderRect.left;
-            height += borderRect.bottom - borderRect.top;
-        }
-
-        window = CreateWindowExA(0, title, // This references lpszClassName from wc
-                                 title,    // This is the actual Title
-                                 dwStyle,
-                                 100,
-                                 100,
-                                 width,
-                                 height,
-                                 NULL, // parent
-                                 NULL, // menu
-                                 instance,
-                                 NULL); // lpParam
-
-        if (window == NULL)
-        {
-            SM_ASSERT(false, "Failed to create Windows Window");
-            return false;
-        }
-
-        dc = GetDC(window);
-        if (!dc)
-        {
-            SM_ASSERT(false, "Failed to get DC");
-            return false;
-        }
-
-        PIXELFORMATDESCRIPTOR pfd =
-            {
-                sizeof(PIXELFORMATDESCRIPTOR),
-                1,
-                PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER, // Flags
-                PFD_TYPE_RGBA,                                              // The kind of framebuffer. RGBA or palette.
-                32,                                                         // Colordepth of the framebuffer.
-                0, 0, 0, 0, 0, 0,
-                0,
-                0,
-                0,
-                0, 0, 0, 0,
-                24, // Number of bits for the depthbuffer
-                8,  // Number of bits for the stencilbuffer
-                0,  // Number of Aux buffers in the framebuffer.
-                PFD_MAIN_PLANE,
-                0,
-                0, 0, 0};
-
-        const int attribList[] =
-            {
-                WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-                WGL_ARB_create_context_profile, GL_TRUE,
-                WGL_ARB_pixel_format_float, GL_TRUE,
-                WGL_ARB_framebuffer_sRGB, GL_TRUE,
-                WGL_ARB_multisample, GL_TRUE,
-                WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-                WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-                WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-                WGL_COLOR_BITS_ARB, 32,
-                WGL_DEPTH_BITS_ARB, 24,
-                WGL_STENCIL_BITS_ARB, 8,
-                0, // Terminate with 0, otherwise OpenGL will throw an Error!
-            };
-
-        int pixelFormat;
-        UINT numFormats;
-        BOOL result = TRUE;
-        result = wglChoosePixelFormatARB(dc, attribList, NULL, 1, &pixelFormat, &numFormats);
-        printf("result: %d\n", (BOOL)result);
-        if (result == FALSE)
-        {
-            SM_ASSERT(0, "Failed to Choose Pixel Format");
-            return false;
-        }
-
-        // int pixelFormat = ChoosePixelFormat(dc, &pfd);
-        // if (!pixelFormat)
-        // {
-        //     // char errorStr[1024];
-        //     // FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
-        //     // printf("Error: %s\n", errorStr);
-        //     SM_ASSERT(false, "Failed to choose pixel Format");
-        //     return false;
-        // }
-        // printf("Pixel Format: %d\n", pixelFormat);
-
-        DescribePixelFormat(dc, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
-        if (!SetPixelFormat(dc, pixelFormat, &pfd))
-        {
-            // char errorStr[1024];
-            // FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
-            // printf("Error: %s\n", errorStr);
-            SM_ASSERT(0, "Failed to SetPixelFormat");
-            return true;
-        }
-
-        const int contextAttribs[] =
-            {
-                WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
-                WGL_CONTEXT_MINOR_VERSION_ARB, 3,
-                WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-                WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
-                0 // Terminate the Array
-            };
-
-        //HGLRC rc = wglCreateContext(dc);
-        HGLRC rc = wglCreateContextAttribsARB(dc, 0, contextAttribs);
-        if (!rc)
-        {
-            SM_ASSERT(0, "Failed to create Render Context for OpenGL");
-            return false;
-        }
-
-        if (!wglMakeCurrent(dc, rc))
-        {
-            SM_ASSERT(0, "Failed to wglMakeCurrent");
-            return false;
-        }
+        SM_ASSERT(false, "Failed to get DC");
+        return false;
+    }
+    // Win32CreateOpenGLContextForWorkerThread();
+    GlobalOpenGLRC = Win32InitOpenGL(GlobalDC);
+    if (!GlobalOpenGLRC)
+    {
+        SM_ASSERT(false, "Failed to get GlobalOpenGLRC");
+        return false;
     }
 
     ShowWindow(window, SW_SHOW);
@@ -338,5 +313,5 @@ void *platform_load_gl_function(char *funName)
 
 void platform_swap_buffers()
 {
-    SwapBuffers(dc);
+    SwapBuffers(GlobalDC);
 }
