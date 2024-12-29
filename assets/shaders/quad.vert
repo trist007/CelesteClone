@@ -53,5 +53,4 @@ void main()
 
   gl_Position = vec4(vertices[gl_VertexID], 1.0, 1.0);
   textureCoordsOut = textureCoords[gl_VertexID];
-  //gl_Position = vec4(a.Pos.x, aPos.y, aPos.z, 1.0);
 }
