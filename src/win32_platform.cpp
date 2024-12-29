@@ -54,6 +54,7 @@ bool platform_create_window(int width, int height, char *title)
     HINSTANCE instance = GetModuleHandleA(0);
 
     WNDCLASSA wc = {};
+    wc.style = CS_OWNDC;
     wc.hInstance = instance;
     wc.hIcon = LoadIcon(instance, IDI_APPLICATION);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW); // This means we decide the look of the cursor(arrow)
@@ -98,14 +99,33 @@ bool platform_create_window(int width, int height, char *title)
             return false;
         }
 
-        PIXELFORMATDESCRIPTOR pfd = {0};
-        pfd.nSize = sizeof(pfd);
-        pfd.nVersion = 1;
-        pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-        pfd.iPixelType = PFD_TYPE_RGBA;
-        pfd.cColorBits = 32;
-        pfd.cAlphaBits = 8;
-        pfd.cDepthBits = 24;
+        PIXELFORMATDESCRIPTOR pfd =
+            {
+                sizeof(PIXELFORMATDESCRIPTOR),
+                1,
+                PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER, // Flags
+                PFD_TYPE_RGBA,                                              // The kind of framebuffer. RGBA or palette.
+                32,                                                         // Colordepth of the framebuffer.
+                0, 0, 0, 0, 0, 0,
+                0,
+                0,
+                0,
+                0, 0, 0, 0,
+                24, // Number of bits for the depthbuffer
+                8,  // Number of bits for the stencilbuffer
+                0,  // Number of Aux buffers in the framebuffer.
+                PFD_MAIN_PLANE,
+                0,
+                0, 0, 0};
+
+        // PIXELFORMATDESCRIPTOR pfd = {0};
+        // pfd.nSize = sizeof(pfd);
+        // pfd.nVersion = 1;
+        // pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+        // pfd.iPixelType = PFD_TYPE_RGBA;
+        // pfd.cColorBits = 32;
+        // pfd.cAlphaBits = 8;
+        // pfd.cDepthBits = 24;
 
         int pixelFormat = ChoosePixelFormat(fakeDC, &pfd);
         if (!pixelFormat)
@@ -146,9 +166,9 @@ bool platform_create_window(int width, int height, char *title)
         }
 
         // Clean up the take stuff
-         wglMakeCurrent(fakeDC, 0);
-         wglDeleteContext(fakeRC);
-         ReleaseDC(window, fakeDC);
+        wglMakeCurrent(fakeDC, 0);
+        wglDeleteContext(fakeRC);
+        ReleaseDC(window, fakeDC);
 
         // Can't reuse the same (Device)Context,
         // because we already called "SetPixelFormat"
@@ -191,29 +211,65 @@ bool platform_create_window(int width, int height, char *title)
             return false;
         }
 
-        PIXELFORMATDESCRIPTOR pfd = {0};
-        //DescribePixelFormat(dc, 1, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
-        pfd.nSize = sizeof(pfd);
-        pfd.nVersion = 1;
-        pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-        pfd.iPixelType = PFD_TYPE_RGBA;
-        pfd.cColorBits = 32;
-        pfd.cAlphaBits = 8;
-        pfd.cDepthBits = 24;
+        PIXELFORMATDESCRIPTOR pfd =
+            {
+                sizeof(PIXELFORMATDESCRIPTOR),
+                1,
+                PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER, // Flags
+                PFD_TYPE_RGBA,                                              // The kind of framebuffer. RGBA or palette.
+                32,                                                         // Colordepth of the framebuffer.
+                0, 0, 0, 0, 0, 0,
+                0,
+                0,
+                0,
+                0, 0, 0, 0,
+                24, // Number of bits for the depthbuffer
+                8,  // Number of bits for the stencilbuffer
+                0,  // Number of Aux buffers in the framebuffer.
+                PFD_MAIN_PLANE,
+                0,
+                0, 0, 0};
 
-        //DescribePixelFormat(dc, 10, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+        const int attribList[] =
+            {
+                WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+                WGL_ARB_create_context_profile, GL_TRUE,
+                WGL_ARB_pixel_format_float, GL_TRUE,
+                WGL_ARB_framebuffer_sRGB, GL_TRUE,
+                WGL_ARB_multisample, GL_TRUE,
+                WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+                WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+                WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+                WGL_COLOR_BITS_ARB, 32,
+                WGL_DEPTH_BITS_ARB, 24,
+                WGL_STENCIL_BITS_ARB, 8,
+                0, // Terminate with 0, otherwise OpenGL will throw an Error!
+            };
 
-        int pixelFormat = ChoosePixelFormat(dc, &pfd);
-        if (!pixelFormat)
+        int pixelFormat;
+        UINT numFormats;
+        BOOL result = TRUE;
+        result = wglChoosePixelFormatARB(dc, attribList, NULL, 1, &pixelFormat, &numFormats);
+        printf("result: %d\n", (BOOL)result);
+        if (result == FALSE)
         {
-            // char errorStr[1024];
-            // FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
-            // printf("Error: %s\n", errorStr);
-            SM_ASSERT(false, "Failed to choose pixel Format");
+            SM_ASSERT(0, "Failed to Choose Pixel Format");
             return false;
         }
 
-        if (!SetPixelFormat(dc, 10, &pfd))
+        // int pixelFormat = ChoosePixelFormat(dc, &pfd);
+        // if (!pixelFormat)
+        // {
+        //     // char errorStr[1024];
+        //     // FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
+        //     // printf("Error: %s\n", errorStr);
+        //     SM_ASSERT(false, "Failed to choose pixel Format");
+        //     return false;
+        // }
+        // printf("Pixel Format: %d\n", pixelFormat);
+
+        DescribePixelFormat(dc, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+        if (!SetPixelFormat(dc, pixelFormat, &pfd))
         {
             // char errorStr[1024];
             // FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
@@ -224,30 +280,24 @@ bool platform_create_window(int width, int height, char *title)
 
         const int contextAttribs[] =
             {
-                WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
+                WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
                 WGL_CONTEXT_MINOR_VERSION_ARB, 3,
                 WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
                 WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
-                0,0 // Terminate the Array
+                0 // Terminate the Array
             };
 
-        HGLRC rc = wglCreateContext(dc);
-        //HGLRC rc = wglCreateContextAttribsARB(dc, 0, contextAttribs);
+        //HGLRC rc = wglCreateContext(dc);
+        HGLRC rc = wglCreateContextAttribsARB(dc, 0, contextAttribs);
         if (!rc)
         {
-            // char errorStr[1024];
-            // FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
-            // printf("Error: %s\n", errorStr);
-            SM_ASSERT(0, "Failed to crate Render Context for OpenGL");
+            SM_ASSERT(0, "Failed to create Render Context for OpenGL");
             return false;
         }
 
         if (!wglMakeCurrent(dc, rc))
         {
-            char errorStr[1024];
-            FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, errorStr, 255, NULL);
-            printf("Error: %s\n", errorStr);
-            SM_ASSERT(0, "Faield to wglMakeCurrent");
+            SM_ASSERT(0, "Failed to wglMakeCurrent");
             return false;
         }
     }
