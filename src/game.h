@@ -7,10 +7,31 @@
 // ################################################################
 //                    Game Structs
 // ################################################################
+enum GameInputType
+{
+    MOVE_LEFT,
+    MOVE_RIGHT,
+    MOVE_UP,
+    MOVE_DOWN,
+    JUMP,
+
+    MOUSE_LEFT,
+    MOUSE_RIGHT,
+
+    GAME_INPUT_COUNT
+};
+
+struct KeyMapping
+{
+    Array<KeyCodeID, 3> keys;
+};
+
 struct GameState
 {
     bool initialized = false;
     IVec2 playerPos;
+
+    KeyMapping keyMappings[GAME_INPUT_COUNT];
 };
 
 // ################################################################
@@ -20,7 +41,7 @@ static GameState* gameState;
 constexpr int tset = 5;
 
 // ################################################################
-//                    Game Functions (Exported)
+//                    Game Functions (Exposed)
 // ################################################################
 extern "C"
 {
