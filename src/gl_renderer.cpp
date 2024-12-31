@@ -20,6 +20,7 @@ struct GLContext
     GLuint textureID;
     GLuint transformSBOID;
     GLuint screenSizeID;
+    GLuint orthoProjectionID;
 };
 
 // #############################################################################
@@ -155,6 +156,7 @@ bool gl_init(BumpAllocator *transientStorage)
     //  Uniforms
     {
         glContext.screenSizeID = glGetUniformLocation(glContext.programID, "screenSize");
+        glContext.orthoProjectionID = glGetUniformLocation(glContext.programID, "orthoProjection");
     }
 
     // Depth Tesing
@@ -177,6 +179,14 @@ void gl_render()
     // Copy screen size to the GPU
     Vec2 screenSize = {(float)input->screenSizeX, (float)input->screenSizeY};
     glUniform2fv(glContext.screenSizeID, 1, &screenSize.x);
+
+    // Orthographic Projection
+    OrthographicCamera2D camera = renderData->gameCamera;
+    Mat4 orthoProjection = orthographic_projection(camera.position.x - camera.dimensions.x / 2.0f,
+                                                   camera.position.x + camera.dimensions.x / 2.0f,
+                                                   camera.position.y - camera.dimensions.y / 2.0f,
+                                                   camera.position.y + camera.dimensions.y / 2.0f);
+    glUniformMatrix4fv(glContext.orthoProjectionID, 1, GL_FALSE, &orthoProjection.ax);
 
     // Opaque Objects
     {
