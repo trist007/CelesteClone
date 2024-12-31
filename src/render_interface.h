@@ -11,6 +11,13 @@ constexpr int MAX_TRANSFORMS = 1000;
 // ##################################################################################
 //                               Renderer Structs
 // ##################################################################################
+struct OrthographicCamera2D
+{
+    float zoom = 1.0f;
+    Vec2 dimensions;
+    Vec2 position;
+};
+
 struct Transform
 {
     Vec2 pos;
@@ -21,6 +28,8 @@ struct Transform
 
 struct RenderData
 {
+    OrthographicCamera2D gameCamera;
+    OrthographicCamera2D uiCamera;
     int transformCount;
     Transform transforms[MAX_TRANSFORMS];
 };

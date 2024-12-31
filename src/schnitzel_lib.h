@@ -308,3 +308,57 @@ struct IVec2
     int x;
     int y;
 };
+
+struct Vec4
+{
+    union
+    {
+        float values[4];
+        struct 
+        {
+            float x;
+            float y;
+            float z;
+            float w;
+        };
+
+        struct
+        {
+            float r;
+            float g;
+            float b;
+            float a;
+        };
+    };
+};
+
+struct Mat4
+{
+    union
+    {
+        Vec4 values[4];
+        struct
+        {
+            float ax;
+            float bx;
+            float cx;
+            float dx;
+
+            float ay;
+            float by;
+            float cy;
+            float dy;
+
+            float az;
+            float bz;
+            float cz;
+            float dz;
+
+            float aw;
+            float bw;
+            float cw;
+            float dw;
+        };
+        
+    };
+};
