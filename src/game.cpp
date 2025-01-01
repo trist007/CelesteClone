@@ -5,9 +5,6 @@
 // #############################################################################
 //                            Game Constants
 // #############################################################################
-constexpr int WORLD_WIDTH = 320;
-constexpr int WORLD_HEIGHT = 180;
-constexpr int TILESIZE = 8;
 
 // #############################################################################
 //                            Game Structs
@@ -44,6 +41,25 @@ bool is_down(GameInputType type)
     return false;
 }
 
+Tile* get_tile(int x, int y)
+{
+    Tile* tile = nullptr;
+
+    if(x >= 0 && x < WORLD_GRID.x && y >= 0 && y < WORLD_GRID.y)
+    {
+        tile = &gameState->worldGrid[x][y];
+    }
+
+    return tile;
+}
+
+Tile* get_tile(IVec2 worldPos)
+{
+    int x = worldPos.x / TILESIZE;
+    int y = worldPos.y / TILESIZE;
+
+    return get_tile(x, y);
+}
 // #############################################################################
 //                            Game Functions(exposed)
 // #############################################################################
@@ -61,6 +77,22 @@ EXPORT_FN void update_game(GameState* gameStateIn, RenderData* renderDataIn, Inp
         renderData->gameCamera.dimensions = {WORLD_WIDTH, WORLD_HEIGHT};
         gameState->initialized = true;
 
+        // Tileset
+        {
+            IVec2 tilesPosition = {48, 0};
+
+            for (int y = 0; y < 5; y++)
+            {
+                for (int x = 0; x < 4; x++)
+                {
+                    gameState->tileCoords.add({tilesPosition.x + x * 8, tilesPosition.y + y * 8});
+                }
+            }
+
+            // Black inside
+            gameState->tileCoords.add({tilesPosition.x, tilesPosition.y + 5 * 8});
+        }
+
         // Key Mappings
         {
             gameState->keyMappings[MOVE_UP].keys.add(KEY_W);
@@ -71,11 +103,113 @@ EXPORT_FN void update_game(GameState* gameStateIn, RenderData* renderDataIn, Inp
             gameState->keyMappings[MOVE_DOWN].keys.add(KEY_DOWN);
             gameState->keyMappings[MOVE_RIGHT].keys.add(KEY_D);
             gameState->keyMappings[MOVE_RIGHT].keys.add(KEY_RIGHT);
+            gameState->keyMappings[MOUSE_LEFT].keys.add(KEY_MOUSE_LEFT);
+            gameState->keyMappings[MOUSE_RIGHT].keys.add(KEY_MOUSE_RIGHT);
+        }
+
+        renderData->gameCamera.position.x = 160;
+        renderData->gameCamera.position.y = -90;
+    }
+
+    if(is_down(MOUSE_LEFT))
+    {
+        IVec2 mousePosWorld = input->mousePosWorld;
+        Tile* tile = get_tile(mousePosWorld);
+        if(tile)
+        {
+            tile->isVisible = true;
         }
     }
 
-    renderData->gameCamera.position.x = 160;
-    renderData->gameCamera.position.y = 90;
+    if(is_down(MOUSE_RIGHT))
+    {
+        IVec2 mousePosWorld = input->mousePosWorld;
+        Tile* tile = get_tile(mousePosWorld);
+        if(tile)
+        {
+            tile->isVisible = false;
+        }
+    }
+
+    // Drawing Tileset
+    {
+        // Neighboring Tiles        Top     Left    Bottom      Right 
+        int neighborOffsets[24] = { 0,-1,  -1, 0,    1, 0,      0, 1,
+        //                          Topleft Topright Bottomleft Bottomright
+                                    -1,-1,  1, -1,  -1, 1,      1, 1, 
+        //                          Top2     Left2   Right2     Bottom2
+                                    0,-2,    -2, 0,   2, 0,     0, 2};   
+
+        // Topleft      = BIT(4) = 16
+        // Topright     = BIT(5) = 32
+        // Bottomleft   = BIT(6) = 64
+        // Bottomright  = BIT(7) = 128
+
+        for(int y = 0; y < WORLD_GRID.y; y++)
+        {
+            for(int x = 0; x < WORLD_GRID.x; x++)
+            {
+                Tile* tile = get_tile(x, y);
+                
+                if(!tile->isVisible)
+                {
+                    continue;
+                }
+
+                tile->neighborMask = 0;
+                int neighborCount = 0;
+                int extendedNeighborCount = 0;
+                int emptyNeighborSlot = 0;
+
+                // Look at the surrounding 12 Neighbords
+                for(int n = 0; n < 12; n++)
+                {
+                    Tile* neighbor = get_tile(x + neighborOffsets[n * 2],
+                                              y + neighborOffsets[n * 2 + 1]);
+                    
+                    // No neighbor means the edge of the world
+                    if(!neighbor || neighbor->isVisible)
+                    {
+                        tile->neighborMask |= BIT(n);
+                        if(n < 8) // Counting direct neighbors
+                        {
+                            neighborCount++;
+                        }
+                        else
+                        {
+                            extendedNeighborCount++;
+                        }
+                    }
+                    else if(n < 8)
+                    {
+                        emptyNeighborSlot = n;
+                    }
+                }
+
+                if(neighborCount == 7 && emptyNeighborSlot >= 4) // We have a corner
+                {
+                    tile->neighborMask = 16 + (emptyNeighborSlot - 4);
+                }
+                else if(neighborCount == 8 && extendedNeighborCount == 4)
+                {
+                    tile->neighborMask = 20;
+                }
+                else
+                {
+                    tile->neighborMask  = tile->neighborMask & 0b1111;
+                }
+
+                // Draw Tile
+                Transform transform = {};
+                // Draw the Tile around the center
+                transform.pos = {x * (float)TILESIZE, y * (float)TILESIZE};
+                transform.size = {8, 8};
+                transform.spriteSize = {8, 8};
+                transform.atlasOffset = gameState->tileCoords[tile->neighborMask];
+                draw_quad(transform);
+            }
+        }
+    }
 
     draw_sprite(SPRITE_DICE, gameState->playerPos);
 
