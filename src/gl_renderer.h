@@ -1,6 +1,10 @@
+#ifndef GL_RENDERER_H
+#define GL_RENDERER_H
+
 #pragma once
 
 #include "glcorearb.h"
+#include "platform.h"
 
 // #############################################################################
 //                           OpenGL Function Pointers
@@ -498,3 +502,5 @@ void glFrontFace(GLenum mode)
     glFrontFace_ptr(mode);
 }
 */
+
+#endif // GL_RENDERER_H

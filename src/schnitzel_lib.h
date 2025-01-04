@@ -1,3 +1,6 @@
+#ifndef SCHNITZEL_LIB_H
+#define SCHNITZEL_LIB_H
+
 #pragma once
 
 #include <stdio.h>
@@ -198,7 +201,7 @@ char *bump_alloc(BumpAllocator *bumpAllocator, size_t size)
 //                       File I/O
 // ################################################################
 
-long long get_timestamp(char *file)
+long long get_timestamp(const char *file)
 {
     struct stat file_stat = {};
     stat(file, &file_stat);
@@ -344,6 +347,11 @@ bool copy_file(char *fileName, char *outputName, BumpAllocator *bumpAllocator)
 // ################################################################
 //                       Math stuff
 // ################################################################
+long long maxValue(long long a, long long b)
+{
+    return (a > b) ? a : b;
+}
+
 struct Vec2
 {
     float x;
@@ -454,3 +462,4 @@ Mat4 orthographic_projection(float left, float right, float top, float bottom)
 
     return result;
 }
+#endif //  SCHNITZEL_LIB_H

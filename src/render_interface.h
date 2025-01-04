@@ -2,6 +2,7 @@
 
 #include "assets.h"
 #include "schnitzel_lib.h"
+#include "input.h"
 
 // ##################################################################################
 //                               Renderer Constants
