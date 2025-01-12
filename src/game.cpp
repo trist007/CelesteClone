@@ -402,7 +402,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
             gameState->keyMappings[MOVE_RIGHT].keys.add(KEY_RIGHT);
             gameState->keyMappings[MOUSE_LEFT].keys.add(KEY_MOUSE_LEFT);
             gameState->keyMappings[MOUSE_RIGHT].keys.add(KEY_MOUSE_RIGHT);
-            gameState->keyMappings[JUMP].keys.add(KEY_J);
+            gameState->keyMappings[JUMP].keys.add(KEY_SPACE);
         }
 
         renderData->gameCamera.position.x = 160;
