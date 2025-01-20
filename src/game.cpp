@@ -116,6 +116,7 @@ void simulate()
       player.speed.y = jumpSpeed;
       player.speed.x += player.solidSpeed.x;
       player.speed.y += player.solidSpeed.y;
+      play_sound("jump");
       grounded = false;
     }
 
@@ -571,6 +572,7 @@ void simulate()
 EXPORT_FN void update_game(GameState* gameStateIn, 
                            RenderData* renderDataIn, 
                            Input* inputIn, 
+                           SoundState* soundStateIn,
                            float dt)
 {
   if(renderData != renderDataIn)
@@ -578,6 +580,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
     gameState = gameStateIn;
     renderData = renderDataIn;
     input = inputIn;
+    soundState = soundStateIn;
   }
 
   if(!gameState->initialized)
