@@ -71,7 +71,7 @@ void play_sound(char* soundName, SoundOptions options = 0)
 
     Sound sound = {};
     sound.options = options;
-    sprintf_s(sound.file, ArraySize(sound.file), "assets/sounds/%s.wave", soundName);
+    sprintf_s(sound.file, ArraySize(sound.file), "assets/sounds/%s.wav", soundName);
 
     // look for existing Sound to play
     for(int soundIdx = 0; soundIdx < soundState->allocatedSounds.count; soundIdx++)
@@ -89,6 +89,7 @@ void play_sound(char* soundName, SoundOptions options = 0)
 
     // Couldn't find a Sound, Load WAV file if present and allocate
     WAVFile* wavFile = load_wav(sound.file, soundState->transientStorage);
+
     if(wavFile)
     {
         if(wavFile->header.dataChunkSize > SOUNDS_BUFFER_SIZE - soundState->bytesUsed)
@@ -100,6 +101,7 @@ void play_sound(char* soundName, SoundOptions options = 0)
         sound.size = wavFile->header.dataChunkSize;
         sound.data = &soundState->allocatedSoundsBuffer[soundState->bytesUsed];
         soundState->bytesUsed += sound.size;
+
         memcpy(sound.data, &wavFile->dataBegin, sound.size);
 
         soundState->allocatedSounds.add(sound);

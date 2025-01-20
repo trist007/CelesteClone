@@ -82,6 +82,11 @@ int main()
     platform_fill_keycode_lookup_table();
     platform_create_window(1280, 720, "Schnitzel Motor");
     platform_set_vsync(true);
+    if(!platform_init_audio())
+    {
+        SM_ERROR("Failed to initialize Audio");
+        return -1;
+    }
 
     gl_init(&transientStorage);
 
@@ -95,6 +100,7 @@ int main()
         platform_update_window();
         update_game(gameState, renderData, input, soundState, dt);
         gl_render(&transientStorage);
+        platform_update_audio(dt);
 
         platform_swap_buffers();
 

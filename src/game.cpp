@@ -585,6 +585,7 @@ EXPORT_FN void update_game(GameState* gameStateIn,
 
   if(!gameState->initialized)
   {
+    play_sound("First Steps", SOUND_OPTION_LOOP);
     renderData->gameCamera.dimensions = {WORLD_WIDTH, WORLD_HEIGHT};
     gameState->initialized = true;
 
