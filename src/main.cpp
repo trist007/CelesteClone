@@ -72,8 +72,8 @@ int main()
         return -1;
     }
     soundState->transientStorage = &transientStorage;
-    soundState->allocatedSoundsBuffer = bump_alloc(&persistentStorage, SOUNDS_BUFFER_SIZE);
-    if(!soundState->allocatedSoundsBuffer)
+    soundState->allocatedsoundsBuffer = bump_alloc(&persistentStorage, SOUNDS_BUFFER_SIZE);
+    if(!soundState->allocatedsoundsBuffer)
     {
         SM_ERROR("Failed to allocate Sounds Buffer");
         return -1;
