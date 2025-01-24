@@ -39,7 +39,7 @@ struct KeyMapping
 
 struct Tile
 {
-    int neighborMask;
+    int neighbourMask;
     bool isVisible;
 };
 
