@@ -4,120 +4,207 @@
 #include "shader_header.h"
 #include "schnitzel_lib.h"
 
-// ##################################################################################
-//                               Renderer Constants
-// ##################################################################################
+
+// #############################################################################
+//                           Renderer Constants
+// #############################################################################
 int RENDER_OPTION_FLIP_X = BIT(0);
 int RENDER_OPTION_FLIP_Y = BIT(1);
 
-// ##################################################################################
-//                               Renderer Structs
-// ##################################################################################
+// #############################################################################
+//                           Renderer Structs
+// #############################################################################
 struct OrthographicCamera2D
 {
-    float zoom = 1.0f;
-    Vec2 dimensions;
-    Vec2 position;
+  float zoom = 1.0f;
+  Vec2 dimensions;
+  Vec2 position;
 };
 
 struct DrawData
 {
-    int animationIdx;
-    int renderOptions;
+  Material material = {};
+  int animationIdx;
+  int renderOptions;
+};
+
+struct TextData
+{
+  Material material = {};
+  float fontSize = 1.0f;
+  int renderOptions;
+};
+
+struct Glyph
+{
+  Vec2 offset;
+  Vec2 advance;
+  IVec2 textureCoords;
+  IVec2 size;
 };
 
 struct RenderData
 {
-    OrthographicCamera2D gameCamera;
-    OrthographicCamera2D uiCamera;
+  OrthographicCamera2D gameCamera;
+  OrthographicCamera2D uiCamera;
 
-    Array<Transform, 1000> transforms;
+  int fontHeight;
+  Glyph glyphs[127];
+
+  Array<Material, 1000> materials;
+  Array<Transform, 1000> transforms;
+  Array<Transform, 1000> uiTransforms;
 };
 
-// ##################################################################################
-//                               Renderer Globals
-// ##################################################################################
+// #############################################################################
+//                           Renderer Globals
+// #############################################################################
 static RenderData* renderData;
 
-// ##################################################################################
-//                               Renderer Utility
-// ##################################################################################
+// #############################################################################
+//                           Renderer Untility
+// #############################################################################
 IVec2 screen_to_world(IVec2 screenPos)
 {
-    OrthographicCamera2D camera = renderData->gameCamera;
+  OrthographicCamera2D camera = renderData->gameCamera;
 
-    int xPos = (float)screenPos.x /
-                    (float)input->screenSize.x *
-                    camera.dimensions.x; // [0; dimensions.x]
+  int xPos = (float)screenPos.x / 
+             (float)input->screenSize.x * 
+             camera.dimensions.x; // [0; dimensions.x]
 
-    // Offset using dimensions and position
-    xPos += -camera.dimensions.x / 2.0f + camera.position.x;
+  // Offset using dimensions and position
+  xPos += -camera.dimensions.x / 2.0f + camera.position.x;
 
-    int yPos = (float)screenPos.y /
-                    (float)input->screenSize.y *
-                    camera.dimensions.y; // [0; dimensions.y]
+  int yPos = (float)screenPos.y / 
+             (float)input->screenSize.y * 
+             camera.dimensions.y; // [0; dimensions.y]
 
-    // Offset using dimensions and position
-    yPos += camera.dimensions.y / 2.0f + camera.position.y;
+  // Offset using dimensions and position
+  yPos += camera.dimensions.y / 2.0f + camera.position.y;
 
-    return {xPos, yPos};
+  return {xPos, yPos};
 }
 
 int animate(float* time, int frameCount, float duration = 1.0f)
 {
-    while(*time > duration)
-    {
-        *time -= duration;
-    }    
-
-    int animationIdx = (int)((*time / duration) * frameCount);
-
-    // Clamp
-    if(animationIdx >= frameCount)
-    {
-        animationIdx = frameCount - 1;
-    }
-
-    return animationIdx;
+  while(*time > duration)
+  {
+    *time -= duration;
+  }
+  
+  int animationIdx = (int)((*time / duration) * frameCount);
+  
+  // Clamp
+  if (animationIdx >= frameCount)
+  {
+    animationIdx = frameCount - 1;
+  }
+  
+  return animationIdx;
 }
 
-// ##################################################################################
-//                               Renderer Functions
-// ##################################################################################
+int get_material_idx(Material material = {})
+{
+  // Convert from SRGB to linear color space, to be used in the shader, poggies
+  material.color.r = powf(material.color.r, 2.2f);
+  material.color.g = powf(material.color.g, 2.2f);
+  material.color.b = powf(material.color.b, 2.2f);
+  material.color.a = powf(material.color.a, 2.2f);
+
+  for(int materialIdx = 0; materialIdx < renderData->materials.count; materialIdx++)
+  {
+    if(renderData->materials[materialIdx] == material)
+    {
+      return materialIdx;
+    }
+  }
+
+  return renderData->materials.add(material);
+}
+
+// #############################################################################
+//                           Renderer Functions
+// #############################################################################
 void draw_quad(Transform transform)
 {
-    renderData->transforms.add(transform);
+  renderData->transforms.add(transform);
 }
 
 void draw_quad(Vec2 pos, Vec2 size)
 {
-    Transform transform = {};
-    transform.pos =  pos - size / 2.0f;
-    transform.size = size;
-    transform.atlasOffset = {0, 0};
-    transform.spriteSize = {1, 1}; // Indexing into white
+  Transform transform = {};
+  transform.pos = pos - size / 2.0f;
+  transform.size = size;
+  transform.atlasOffset = {0, 0};
+  transform.spriteSize = {1, 1}; // Indexing into white
 
-    renderData->transforms.add(transform);
+  renderData->transforms.add(transform);
 }
+
 void draw_sprite(SpriteID spriteID, Vec2 pos, DrawData drawData = {})
 {
-    Sprite sprite = get_sprite(spriteID);
-    // For animations, this is a multiple of the sprites size,
-    // basd on the animationIdx
-    sprite.atlasOffset.x += drawData.animationIdx * sprite.size.x;
+  Sprite sprite = get_sprite(spriteID);
+  // For Anmations, this is a multiple of the sprites size,
+  // based on the animationIdx
+  sprite.atlasOffset.x += drawData.animationIdx * sprite.size.x;
 
-    Transform transform = {};
-    transform.pos = pos - vec_2(sprite.size) / 2.0f;
-    transform.size = vec_2(sprite.size);
-    transform.atlasOffset = sprite.atlasOffset;
-    transform.spriteSize = sprite.size;
-    transform.renderOptions = drawData.renderOptions;
+  Transform transform = {};
+  transform.materialIdx = get_material_idx(drawData.material);
+  transform.pos = pos - vec_2(sprite.size) / 2.0f;
+  transform.size = vec_2(sprite.size);
+  transform.atlasOffset = sprite.atlasOffset;
+  transform.spriteSize = sprite.size;
+  transform.renderOptions = drawData.renderOptions;
 
-    renderData->transforms.add(transform);
-
+  renderData->transforms.add(transform);
 }
 
 void draw_sprite(SpriteID spriteID, IVec2 pos, DrawData drawData = {})
 {
-    draw_sprite(spriteID, vec_2(pos), drawData);
+  draw_sprite(spriteID, vec_2(pos), drawData);
+}
+
+// #############################################################################
+//                     Render Interface UI Font Rendering
+// #############################################################################
+void draw_ui_text(char* text, Vec2 pos, TextData textData = {})
+{
+  SM_ASSERT(text, "No Text Supplied!");
+  if(!text)
+  {
+    return;
+  }
+
+  Vec2 origin = pos;
+  while(char c = *(text++))
+  {
+    if(c == '\n')
+    {
+      pos.y += renderData->fontHeight * textData.fontSize;
+      pos.x = origin.x;
+      continue;
+    }
+
+    Glyph glyph = renderData->glyphs[c];
+    Transform transform = {};
+    transform.materialIdx = get_material_idx(textData.material);
+    transform.pos.x = pos.x + glyph.offset.x * textData.fontSize;
+    transform.pos.y = pos.y - glyph.offset.y * textData.fontSize;
+    transform.atlasOffset = glyph.textureCoords;
+    transform.spriteSize = glyph.size;
+    transform.size = vec_2(glyph.size) * textData.fontSize;
+    transform.renderOptions = textData.renderOptions | RENDERING_OPTION_FONT;
+
+    renderData->uiTransforms.add(transform);
+
+    // Advance the Glyph
+    pos.x += glyph.advance.x * textData.fontSize;
+  }
+}
+
+template <typename... Args>
+void draw_format_ui_text(char* format, Vec2 pos, Args... args)
+{
+  char* text = format_text(format, args...);
+  draw_ui_text(text, pos);
 }
