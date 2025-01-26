@@ -4,6 +4,7 @@
 #include "schnitzel_lib.h"
 #include "sound.h"
 #include "render_interface.h"
+#include "ui.h"
 
 // ################################################################
 //                    Game Globals
@@ -104,5 +105,6 @@ extern "C"
                                 RenderData* renderDataIn,
                                 Input* inputIn, 
                                 SoundState* soundStateIn,
+                                UIState* uiStateIn,
                                 float dt);
 }
